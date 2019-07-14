@@ -3,6 +3,7 @@ package com.udacity.gradle.builditbigger;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 
@@ -26,6 +27,9 @@ class EndpointsAsyncTask extends AsyncTask<Void, Void, ArrayList<String>>{
     private SimpleIdlingResource mIdlingResource;
     private DelayCallback mCallback;
 
+    private static final String TAG = EndpointsAsyncTask.class.getSimpleName();
+
+    //Interface callback for use in conjunction with IdlingResource/Espresso Testing
     interface DelayCallback {
         void onDone (ArrayList<String> jokeList);
     }
@@ -61,8 +65,10 @@ class EndpointsAsyncTask extends AsyncTask<Void, Void, ArrayList<String>>{
         if(myApiService == null) {
             MyApi.Builder builder = new MyApi.Builder(AndroidHttp.newCompatibleTransport(),
                     new AndroidJsonFactory(), null)
-                    //BEFORE RUNNING: INSERT LOCAL IP OR DEPLOY PATH INSIDE QUOTES
-                    .setRootUrl("<insert local ip or deploy path here>")
+                    //BEFORE RUNNING: INSERT LOCAL HOST IP OR DEPLOY PATH INSIDE QUOTES
+                    //AFTER https://. Loacal host IP should be in the form
+                    //"https://X.X.X.X:8080/_ah/api"
+                    .setRootUrl("https://louisudacity.appspot.com/_ah/api")
                     .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
                         @Override
                         public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest) throws IOException {
@@ -73,6 +79,9 @@ class EndpointsAsyncTask extends AsyncTask<Void, Void, ArrayList<String>>{
             myApiService = builder.build();
         }
 
+        //If an IOException is thrown, onPostExecute returns without launching the Android Library Activity
+        //Instead, the exception message is logged
+        //See code block in onPostExecute
         try {
             return (ArrayList<String>) myApiService.getJokeList().execute().getJavaJokes();
 
@@ -91,19 +100,24 @@ class EndpointsAsyncTask extends AsyncTask<Void, Void, ArrayList<String>>{
             return;
         }
 
-        Intent intent = new Intent(activity, AndroidActivity.class);
-        intent.putStringArrayListExtra(Intent.EXTRA_TEXT, result);
+        //This block checks that the ArrayList returned by the doInBackground method is filled with jokes
+        //(i.e., size >1) or is simply a one-string ArrayList with an IOException message
+        if (result.size() > 1) {
+            Intent intent = new Intent(activity, AndroidActivity.class);
+            intent.putStringArrayListExtra(Intent.EXTRA_TEXT, result);
+            if (mCallback != null) {
+                mCallback.onDone(result);
+            }
+            activity.startActivity(intent);
+        } else {
+            Log.e(TAG, result.get(0));
+            return;
+        }
 
         progressBar.setVisibility(View.INVISIBLE);
-
-        if (mCallback != null) {
-            mCallback.onDone(result);
-        }
 
         if (mIdlingResource != null) {
             mIdlingResource.setIdleState(true);
         }
-
-        activity.startActivity(intent);
     }
 }

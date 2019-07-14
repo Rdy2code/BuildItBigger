@@ -14,7 +14,6 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
-
 public class AndroidActivity extends AppCompatActivity {
 
     private TextView mJokeView;
@@ -69,6 +68,12 @@ public class AndroidActivity extends AppCompatActivity {
         } else if (mSharedPref.contains(SHAREDPREFERENCES_KEY)) {
             mListIndex = mSharedPref.getInt(SHAREDPREFERENCES_KEY, 0);
             mWelcomeBackView.setVisibility(View.VISIBLE);
+
+            //Adjust index value if needed, following AsyncTaskTest completion
+            if (mListIndex == -1) {
+                mListIndex++;
+            }
+
             mJokeView.setText(mJokeArray.get(mListIndex));
         } else {
             mListIndex = -1;
@@ -83,6 +88,7 @@ public class AndroidActivity extends AppCompatActivity {
                 } else {
                     mListIndex = 0;
                 }
+                mWelcomeBackView.setVisibility(View.INVISIBLE);
                 mJokeView.setText(mJokeArray.get(mListIndex));
             }
         });
